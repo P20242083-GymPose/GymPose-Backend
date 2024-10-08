@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  name      String    @db.VarChar(100)
+  password  String    @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  deleted_at DateTime?
+  history   History[]
+  goals     Goal[]
+  settings  Settings[]
+}
+
+model Exercise {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  iconUrl   String    @db.VarChar(255)
+  tutorialUrl String   @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  deleted_at DateTime?
+  history   History[]
+}
+
+model History {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  exerciseId   Int
+  value        Int
+  duration     String
+  rating       Int?
+  goal         Int?
+  achievedGoal Boolean
+  videoUrl     String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime?
+  deleted_at    DateTime?
+
+  user         User     @relation(fields: [userId], references: [id])
+  exercise     Exercise @relation(fields: [exerciseId], references: [id])
+}
+
+model Goal {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  exceriseId Int
+  value     Int
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  deleted_at DateTime?
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Settings {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  language  String
+  showPopup Boolean
+  showRating Boolean
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  deleted_at DateTime?
+
+  user      User     @relation(fields: [userId], references: [id])
+}
