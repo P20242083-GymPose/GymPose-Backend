@@ -58,7 +58,7 @@ model History {
 model Goal {
   id        Int      @id @default(autoincrement())
   userId    Int
-  exceriseId Int
+  exerciseId Int
   value     Int
   created_at DateTime @default(now())
   updated_at DateTime?
