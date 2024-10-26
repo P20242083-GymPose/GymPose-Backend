@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ExerciseService } from './exercise.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Controller('exercise')
 export class ExerciseController {
@@ -15,8 +16,8 @@ export class ExerciseController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll() {
-    return this.exerciseService.findAll();
+  async findAll(@Query() paginationDto:PaginationDto) {
+    return await this.exerciseService.findAll(paginationDto);
   }
 
   @Get(':id')

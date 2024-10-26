@@ -29,6 +29,7 @@ model User {
 model Exercise {
   id        Int       @id @default(autoincrement())
   name      String    @db.VarChar(100)
+  level     Int?
   iconUrl   String    @db.VarChar(255)
   tutorialUrl String   @db.VarChar(255)
   created_at DateTime @default(now())

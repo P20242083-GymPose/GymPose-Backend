@@ -9,10 +9,18 @@ import { ExerciseModule } from './exercise/exercise.module';
 import { GoalModule } from './goal/goal.module';
 import { SettingsModule } from './settings/settings.module';
 import { AuthModule } from './auth/auth.module';
-
+import { VideosModule } from './videos/videos.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
-  imports: [PrismaModule, UsersModule, HistoryModule, ExerciseModule, GoalModule, SettingsModule, AuthModule],
+  imports: [PrismaModule, UsersModule, HistoryModule, ExerciseModule, GoalModule, SettingsModule, AuthModule, VideosModule, MulterModule.register({
+    dest: './uploads',
+  }), ServeStaticModule.forRoot({
+    rootPath: join(__dirname, '..', 'uploads'),
+    serveRoot: '/uploads', // URL pública para servir archivos
+  }),],
   controllers: [AppController],
   providers: [AppService,PrismaService],
 })

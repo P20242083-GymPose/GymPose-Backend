@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
+import { GlobalFunctions } from 'src/common/functions/global-function';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class ExerciseService {
@@ -12,6 +14,7 @@ export class ExerciseService {
     data: {},
   };
   constructor(
+    private readonly globalFunctions: GlobalFunctions,
     private prisma: PrismaService,
   ) {}
 
@@ -40,13 +43,54 @@ export class ExerciseService {
     return this.resp;
   }
 
-  async findAll() {
+  async findAll(paginationDto: PaginationDto) {
     try {
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
 
-      const exercises = await this.prisma.exercise.findMany();
+      var {
+        page = 1,
+        limit = 1000,
+        order = 'desc',
+        sort = 'id',
+        filter = '[]',
+      } = paginationDto;
+
+      const objectFilter = await this.globalFunctions.getObjectFilterGrid(
+        sort,
+        order,
+        page,
+        limit,
+        filter,
+      );
+
+      const data = await this.prisma.exercise.aggregate({
+        _count: {
+          id: true,
+        },
+        where: {
+          deleted_at: null,
+          AND: objectFilter.contains,
+        },
+      });
+      const { _count } = data;
+      const pages = await this.globalFunctions.getCantPages(_count.id, limit);
+      const responseFilter = await this.globalFunctions.getResponseFilter(
+        limit,
+        order,
+        page,
+        sort,
+        pages,
+        _count.id,
+      );
+      console.log("FILTROS OBJECT", objectFilter.contains)
+      const exercises = await this.prisma.exercise.findMany({
+        where: {
+          deleted_at: null,
+          AND: objectFilter.contains,
+        },
+      });
 
       this.resp.message = 'Exercise fetched successfully';
       this.resp.data = exercises;
