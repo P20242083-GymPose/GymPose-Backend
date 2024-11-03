@@ -11,33 +11,34 @@ export class GoalController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Request() req, @Body() createGoalDto: CreateGoalDto) {
-    const userId = req.id;
-    return this.goalService.create(createGoalDto, userId);
+  async create(@Request() req, @Body() createGoalDto: CreateGoalDto) {
+    const userId = req.user.id;
+    return await this.goalService.create(createGoalDto, userId);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  findByUser(@Request() req) {
-    const userId = req.id;
-    return this.goalService.findByUser(userId);
+  async findByUser(@Request() req) {
+    const userId = req.user.id;
+    return await this.goalService.findByUser(userId);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.goalService.findOne(+id);
+  async findByExercise(@Request() req, @Param('id') id: string) {
+    const userId = req.user.id;
+    return await this.goalService.findByExercise(userId, +id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() updateGoalDto: UpdateGoalDto) {
-    return this.goalService.update(+id, updateGoalDto);
+  async update(@Param('id') id: string, @Body() updateGoalDto: UpdateGoalDto) {
+    return await this.goalService.update(+id, updateGoalDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string) {
-    return this.goalService.remove(+id);
+  async remove(@Param('id') id: string) {
+    return await this.goalService.remove(+id);
   }
 }

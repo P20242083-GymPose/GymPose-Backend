@@ -47,6 +47,7 @@ model History {
   rating       Int?
   goal         Int?
   achievedGoal Boolean
+  goalToReach  Int?
   videoUrl     String?
   created_at    DateTime @default(now())
   updated_at    DateTime?

@@ -21,6 +21,15 @@ export class GoalService {
       this.resp.error = false;
       this.resp.statusCode = 200;
 
+      const goalToDelete = await this.prisma.goal.updateMany({
+        where: {
+          userId: userId,
+          exerciseId: createGoalDto.exerciseId,
+        },
+        data: {
+          deleted_at: new Date(),
+        }
+      });
       const goal = await this.prisma.goal.create({
         data: {
           userId: userId,
@@ -43,6 +52,7 @@ export class GoalService {
 
   async findByUser(userId: number) {
     try {
+      console.log("finding by user",userId)
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
@@ -50,6 +60,32 @@ export class GoalService {
       const goals = await this.prisma.goal.findMany({
         where: {
           userId: userId,
+          deleted_at: null,
+        },
+      });
+
+      this.resp.message = 'Goals fetched successfully';
+      this.resp.data = goals;
+    } catch (error) {
+      console.log(error)
+      this.resp.statusCode = 400;
+      this.resp.message = error;
+      this.resp.data = {};
+    }
+    return this.resp;
+  }
+
+  async findByExercise(userId:number, exerciseId: number) {
+    try {
+      this.resp.data = {};
+      this.resp.error = false;
+      this.resp.statusCode = 200;
+
+      const goals = await this.prisma.goal.findFirst({
+        where: {
+          userId: userId,
+          exerciseId: exerciseId,
+          deleted_at: null,
         },
       });
 

@@ -14,7 +14,7 @@ import { PrismaModule } from '../prisma/prisma.module'; // Importa el PrismaModu
     PrismaModule,
     JwtModule.register({
       secret: 'your-secret-key', // Usa una clave secreta robusta
-      signOptions: { expiresIn: '1h' }, // El token expira en 1 hora
+      signOptions: { expiresIn: '1y' }, // El token expira en 1 hora
     }),
   ],
   providers: [AuthService, JwtStrategy],

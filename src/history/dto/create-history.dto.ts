@@ -29,6 +29,10 @@ export class CreateHistoryDto {
   @IsOptional()
   achievedGoal: boolean;
 
+  @IsNumber()
+  @IsOptional()
+  goalToReach: number;
+
   @IsString()
   @IsOptional()
   videoUrl: string;
