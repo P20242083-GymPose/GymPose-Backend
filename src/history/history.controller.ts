@@ -1,9 +1,10 @@
-import { Controller, Query, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Query, Get, Res, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { HistoryService } from './history.service';
 import { CreateHistoryDto } from './dto/create-history.dto';
 import { UpdateHistoryDto } from './dto/update-history.dto';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Response } from 'express';
 
 @Controller('history')
 export class HistoryController {
@@ -24,6 +25,23 @@ export class HistoryController {
     return await this.historyService.findByUser(paginationDto, userId, pageNumber, itemsPerPageNumber);
   }
 
+  @Get('report')
+  @UseGuards(JwtAuthGuard)
+  async getUserReport(@Request() req, @Res() res: Response) {
+    try {
+      const userId = req.user.id;
+      await this.historyService.generateUserReport(userId,res);
+
+      /* res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="user_report_${userId}.pdf"`,
+      });
+      res.sendFile(filePath); */
+    } catch (error) {
+      console.error('Error fetching user report:', error);
+      res.status(500).json({ message: 'Failed to generate user report' });
+    }
+  }
   
   @Get("weekly-averages")
   @UseGuards(JwtAuthGuard)
@@ -31,6 +49,19 @@ export class HistoryController {
   ) {
     const userId = req.user.id;
     return await this.historyService.getWeeklyAverages(userId, exerciseId);
+  }
+
+  @Get("appUse")
+  @UseGuards(JwtAuthGuard)
+  async getAppUse(@Request() req) {
+    const userId = req.user.id;
+    return await this.historyService.getAppUse(userId);
+  }
+
+  @Patch('rating/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateRating(@Param('id') id: string, @Body() data: any) {
+    return await this.historyService.updateRating(+id, data);
   }
 
   @Get(':id')

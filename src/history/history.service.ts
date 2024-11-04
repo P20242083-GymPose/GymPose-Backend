@@ -4,7 +4,10 @@ import { UpdateHistoryDto } from './dto/update-history.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { GlobalFunctions } from 'src/common/functions/global-function';
-
+import PDFDocument = require('pdfkit'); // Usa require en lugar de import
+import { join } from 'path';
+import * as fs from 'fs';
+import { Response } from 'express';
 
 @Injectable()
 export class HistoryService {
@@ -238,6 +241,143 @@ export class HistoryService {
     }
     return this.resp;
   }
+  async updateRating(id: number, data: any) {
+    try {
+      this.resp.data = {};
+      this.resp.error = false;
+      this.resp.statusCode = 200;
+
+      const history = await this.prisma.history.update({
+        where: { id: id },
+        data: {
+          rating: data.rating,
+        },
+      });
+      this.resp.message = 'Rating updated successfully';
+      this.resp.data = history;
+    } catch (error) {
+      console.log(error)
+      this.resp.statusCode = 400;
+      this.resp.message = error;
+      this.resp.data = {};
+    }
+    return this.resp;
+  }
+
+  async getAppUse(userId: number) {
+    try {
+      this.resp.data = {};
+      this.resp.error = false;
+      this.resp.statusCode = 200;
+  
+      const historyRecords = await this.prisma.history.findMany({
+        where: { userId },
+      });
+  
+      if (historyRecords.length === 0) {
+        this.resp.message = 'No records found for the user';
+        this.resp.data = {
+          averageImprovement: 0,
+          totalTime: '00:00',
+          exerciseCount: 0,
+        };
+        return this.resp;
+      }
+  
+      const totalValue = historyRecords.reduce((sum, record) => sum + record.value, 0);
+      const averageImprovement = (totalValue / historyRecords.length).toFixed(2);
+  
+      const totalDuration = historyRecords.reduce((sum, record) => {
+        const durationInSeconds = parseFloat(record.duration.replace('s', ''));
+        return sum + durationInSeconds;
+      }, 0);
+  
+      const minutes = Math.floor(totalDuration / 60);
+      const seconds = Math.floor(totalDuration % 60);
+      const totalTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
+      const exerciseCount = historyRecords.length;
+  
+      this.resp.message = 'App use fetched successfully';
+      this.resp.data = {
+        averageImprovement: `${averageImprovement}%`,
+        totalTime,
+        exerciseCount,
+      };
+    } catch (error) {
+      console.log(error);
+      this.resp.statusCode = 400;
+      this.resp.message = 'Error fetching app use data';
+      this.resp.data = {};
+    }
+  
+    return this.resp;
+  }
+  
+  async generateUserReport(userId: number, res: Response, exerciseId?: number): Promise<void> {
+    try {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                goals: true,
+            }
+        });
+
+        const appUsage: any = await this.getAppUse(userId); // Obtén los datos de uso
+        const weeklyAverages = await this.getWeeklyAverages(userId, exerciseId); // Obtén los avances del usuario
+
+        const doc = new PDFDocument();
+        const buffers: Buffer[] = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => {
+            const pdfBuffer = Buffer.concat(buffers);
+            // Configura las cabeceras para la respuesta
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="user_report_${userId}.pdf"`);
+            res.send(pdfBuffer); // Envía el PDF como respuesta
+        });
+
+        // Encabezado
+        doc.fontSize(20).text('User Report', { align: 'center' });
+        doc.moveDown();
+
+        // Información del usuario
+        doc.fontSize(14).text('User Information:', { underline: true });
+        doc.fontSize(12).text(`Name: ${user.name}`);
+        doc.text(`Email: ${user.email}`);
+        doc.text(`User ID: ${user.id}`);
+        doc.moveDown();
+
+        // Información de uso de la app
+        doc.fontSize(14).text('App Usage Information:', { underline: true });
+        doc.fontSize(12).text(`Average Improvement: ${appUsage.data.averageImprovement}`);
+        doc.text(`Total Exercise Time: ${appUsage.data.totalTime}`);
+        doc.text(`Exercise Count: ${appUsage.data.exerciseCount}`);
+        doc.moveDown();
+
+        // Avances del usuario
+        doc.fontSize(14).text('User Progress:', { underline: true });
+        weeklyAverages.forEach((week, index) => {
+            doc.fontSize(12).text(`Week ${index + 1} (${week.week}): ${week.averageValue.toFixed(2)}% improvement`);
+        });
+        doc.moveDown();
+
+        // Cierre
+        doc.fontSize(14).text('Summary:', { underline: true });
+        doc.fontSize(12).text('This report highlights the user’s progress and app usage.');
+        doc.text('Keep working towards your goals!');
+        
+        // Finaliza y envía el PDF
+        doc.end();
+    } catch (error) {
+        console.error('Error generating report:', error);
+        throw new Error('Failed to generate report');
+    }
+}
 
   update(id: number, updateHistoryDto: UpdateHistoryDto) {
     return `This action updates a #${id} history`;
