@@ -99,6 +99,7 @@ export class HistoryService {
       const history = await this.prisma.history.findMany({
         where: {
           userId: userId,
+          deleted_at: null,
           AND: objectFilter.contains,
         },
         skip: skip,

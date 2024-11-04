@@ -68,15 +68,15 @@ export class SettingsService {
     return `This action returns a #${id} setting`;
   }
 
-  async update(id: number, updateSettingDto: UpdateSettingDto) {
+  async update(userId: number, updateSettingDto: UpdateSettingDto) {
     try {
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
 
-      const setting = await this.prisma.settings.update({
+      const setting = await this.prisma.settings.updateMany({
         where: {
-          id: id,
+          userId: userId,
         },
         data: updateSettingDto,
       });

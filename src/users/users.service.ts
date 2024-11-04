@@ -48,28 +48,44 @@ export class UsersService {
     return `This action returns a #${id} user`;
   }
 
-  findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+  async findByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
       where: {
         email: email,
+        deleted_at: null,
       },
     });
+    const settings = await this.prisma.settings.findMany({
+      where: {
+        userId: user.id,
+        deleted_at: null,
+      },
+    });
+    return {user, settings};
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: number, updateUserDto: UpdateUserDto) {
     try {
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
-      
-      const user = this.prisma.user.update({
-        where: { id: id },
-        data: {
-          name: updateUserDto.name,
-          email: updateUserDto.email,
-          password: bcrypt.hashSync(updateUserDto.password),
+      console.log("id y datos", id, updateUserDto)
+      const actualUser = await this.prisma.user.findUnique({
+        where: {
+          id: id,
         },
       });
+      const user = await this.prisma.user.update({
+        where: { id: id },
+        data: {
+          name: updateUserDto.name ? updateUserDto.name : actualUser.name,
+          email: updateUserDto.email ? updateUserDto.email : actualUser.email,
+          password: updateUserDto.password ? bcrypt.hashSync(updateUserDto.password) : actualUser.password,
+          updated_at: new Date(),
+        },
+      });
+      console.log("user", user)
+      return user;
     } catch (error) {
       console.log(error)
       this.resp.statusCode = 400;
@@ -80,7 +96,26 @@ export class UsersService {
     return this.resp;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number) {
+    try {
+      this.resp.data = {};
+      this.resp.error = false;
+      this.resp.statusCode = 200;
+
+      const user = await this.prisma.user.delete({
+        where: { id: id },
+      });
+      const settings = await this.prisma.settings.deleteMany({
+        where: { userId: id },
+      });
+      this.resp.message = 'User deleted successfully';
+      this.resp.data = user;
+    } catch (error) {
+      console.log(error)
+      this.resp.statusCode = 400;
+      this.resp.message = error;
+      this.resp.error = true;
+      this.resp.data = {};
+    }
   }
 }

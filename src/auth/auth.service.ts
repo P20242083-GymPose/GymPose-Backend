@@ -21,15 +21,15 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password, ...result } = user;
+    if (user && await bcrypt.compare(password, user.user.password)) {
+      const { ...result } = user;
       return result;
     }
     return null;
   }
 
   async login(user: any) {
-    const payload = { email: user.email, sub: user.id };
+    const payload = { email: user.user.email, sub: user.user.id };
     return { 
       ...user,
       access_token: this.jwtService.sign(payload),
@@ -50,12 +50,23 @@ export class AuthService {
           created_at: new Date(),
         },
       });
+      const settings = await this.prisma.settings.create({
+        data: {
+          userId: user.id,
+          created_at: new Date(),
+          language: 'es',
+          showPopup: true,
+          showRating: true,
+        },
+      });
+
       this.resp.message = 'User created successfully';
       this.resp.data = user;
     } catch (error) {
       console.log(error)
       this.resp.statusCode = 400;
       this.resp.message = error;
+      this.resp.error = true;
       this.resp.data = {};
     }
     return this.resp;
