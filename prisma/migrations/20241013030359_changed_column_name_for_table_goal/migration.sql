@@ -6,5 +6,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `goal` DROP COLUMN `exceriseId`,
+ALTER TABLE `Goal` DROP COLUMN `exceriseId`,
     ADD COLUMN `exerciseId` INTEGER NOT NULL;

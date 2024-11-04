@@ -1,3 +1,3 @@
 
 -- AlterTable
-ALTER TABLE `history` ADD COLUMN `goalToReach` INTEGER NULL;
+ALTER TABLE `History` ADD COLUMN `goalToReach` INTEGER NULL;

@@ -1,3 +1,3 @@
 
 -- AlterTable
-ALTER TABLE `exercise` ADD COLUMN `level` INTEGER NULL;
+ALTER TABLE `Exercise` ADD COLUMN `level` INTEGER NULL;
