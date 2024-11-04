@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateExerciseDto {
 
@@ -13,4 +13,8 @@ export class CreateExerciseDto {
   @IsString()
   @IsOptional()
   tutorialUrl: string;
+
+  @IsNumber()
+  @IsOptional()
+  level: number;
 }

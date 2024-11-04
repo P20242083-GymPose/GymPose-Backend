@@ -28,6 +28,7 @@ export class ExerciseService {
           name: createExerciseDto.name,
           iconUrl: createExerciseDto.iconUrl,
           tutorialUrl: createExerciseDto.tutorialUrl,
+          level: createExerciseDto.level,
           created_at: new Date(),
         },
       });
