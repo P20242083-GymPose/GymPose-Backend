@@ -21,8 +21,9 @@ export class ExerciseController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.exerciseService.findOne(+id);
+  @UseGuards(JwtAuthGuard)
+  async findOne(@Param('id') id: string) {
+    return await this.exerciseService.findOne(+id);
   }
 
   @Patch(':id')

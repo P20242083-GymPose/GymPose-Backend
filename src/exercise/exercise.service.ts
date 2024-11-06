@@ -104,13 +104,13 @@ export class ExerciseService {
     return this.resp;
   }
 
-  findOne(id: number) {
+  async findOne(id: number) {
     try {
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
 
-      const exercise = this.prisma.exercise.findUnique({
+      const exercise = await this.prisma.exercise.findUnique({
         where: {
           id: id,
         },
