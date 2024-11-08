@@ -148,6 +148,79 @@ export class HistoryService {
     return this.resp;
   }
 
+  async getEnhancedWeeklyAverages(userId: number, exerciseId?: number) {
+    const conditions: any = {
+      userId,
+      deleted_at: null,
+    };
+  
+    if (exerciseId) {
+      conditions.exerciseId = Number(exerciseId);
+    }
+  
+    const result = await this.prisma.history.groupBy({
+      by: ['created_at'],
+      where: conditions,
+      _avg: {
+        value: true,
+      },
+      orderBy: {
+        created_at: 'asc',
+      },
+    });
+  
+    const achievedGoalResult = await this.prisma.history.groupBy({
+      by: ['created_at'],
+      where: {
+        ...conditions,
+        achievedGoal: true,
+        goalToReach: { not: null },
+      },
+      _avg: {
+        value: true,
+      },
+      orderBy: {
+        created_at: 'asc',
+      },
+    });
+  
+    const weeklyAverages = result.reduce((acc, record) => {
+      const week = this.getWeekStartDate(record.created_at);
+      if (!acc[week]) {
+        acc[week] = { totalValue: 0, count: 0 };
+      }
+      acc[week].totalValue += record._avg.value || 0;
+      acc[week].count += 1;
+      return acc;
+    }, {});
+  
+    const achievedGoalAverages = achievedGoalResult.reduce((acc, record) => {
+      const week = this.getWeekStartDate(record.created_at);
+      if (!acc[week]) {
+        acc[week] = { totalValue: 0, count: 0 };
+      }
+      acc[week].totalValue += record._avg.value || 0;
+      acc[week].count += 1;
+      return acc;
+    }, {});
+  
+    const generalWeeklyAverages = Object.keys(weeklyAverages).map(week => ({
+      week,
+      averageValue: weeklyAverages[week].totalValue / weeklyAverages[week].count,
+    }));
+  
+    const achievedGoalWeeklyAverages = Object.keys(achievedGoalAverages).map(week => ({
+      week,
+      averageValue: achievedGoalAverages[week].totalValue / achievedGoalAverages[week].count,
+    }));
+  
+    return {
+      generalWeeklyAverages,
+      achievedGoalWeeklyAverages,
+    };
+  }
+  
+
   async getWeeklyAverages(userId: number, exerciseId?: number) {
     const conditions: any = {
       userId,

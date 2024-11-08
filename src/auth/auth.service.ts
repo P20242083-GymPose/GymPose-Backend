@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class AuthService {
@@ -70,5 +71,70 @@ export class AuthService {
       this.resp.data = {};
     }
     return this.resp;
+  }
+
+  async forgotPassword(email: string) {
+    try {
+      const user = await this.usersService.findByEmail(email);
+      if (!user) {
+        this.resp.statusCode = 404;
+        this.resp.message = 'Email not found';
+        this.resp.error = true;
+        return this.resp;
+      }
+
+      const newPassword = this.generateRandomPassword();
+
+      const hashedPassword = bcrypt.hashSync(newPassword);
+
+      await this.prisma.user.update({
+        where: { id: user.user.id },
+        data: { password: hashedPassword },
+      });
+
+      await this.sendRecoveryEmail(email, newPassword);
+
+      this.resp.message = 'Password reset successfully. Please check your email for the new password.';
+      this.resp.data = {};
+      this.resp.error = false;
+      this.resp.statusCode = 200;
+    } catch (error) {
+      console.log(error);
+      this.resp.statusCode = 500;
+      this.resp.message = 'Internal server error';
+      this.resp.error = true;
+      this.resp.data = {};
+    }
+    return this.resp;
+  }
+
+  generateRandomPassword(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  async sendRecoveryEmail(to: string, newPassword: string) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      port: 465,
+      auth: {
+        user: 'kendallramiro@gmail.com',
+        pass: 'fgmbqiliubuqfcve',
+      },
+      secure: true
+    });
+
+    const mailOptions = {
+      from: 'kendallramiro@gmail.com',
+      to,
+      subject: 'Recuperación de Contraseña',
+      text: `Tu nueva contraseña es: ${newPassword}`,
+    };
+
+    await transporter.sendMail(mailOptions);
   }
 }

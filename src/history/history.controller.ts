@@ -48,7 +48,7 @@ export class HistoryController {
   async getWeeklyAverages(@Request() req, @Query('exerciseId') exerciseId?: number,
   ) {
     const userId = req.user.id;
-    return await this.historyService.getWeeklyAverages(userId, exerciseId);
+    return await this.historyService.getEnhancedWeeklyAverages(userId, exerciseId);
   }
 
   @Get("appUse")
