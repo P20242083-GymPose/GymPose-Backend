@@ -101,17 +101,47 @@ export class UsersService {
       this.resp.data = {};
       this.resp.error = false;
       this.resp.statusCode = 200;
-
-      const user = await this.prisma.user.delete({
+  
+      const user = await this.prisma.user.findUnique({
         where: { id: id },
       });
-      const settings = await this.prisma.settings.deleteMany({
-        where: { userId: id },
+  
+      if (!user) {
+        throw new Error('User not found');
+      }
+  
+      const updatedEmail = `${user.email}_deleted_${Date.now()}`;
+  
+      const updatedUser = await this.prisma.user.update({
+        where: { id: id },
+        data: {
+          deleted_at: new Date(),
+          email: updatedEmail, 
+        },
       });
-      this.resp.message = 'User deleted successfully';
-      this.resp.data = user;
+
+      await this.prisma.settings.updateMany({
+        where: {
+          userId: id,
+        },
+        data: {
+          deleted_at: new Date(),
+        },
+      });
+
+      await this.prisma.history.updateMany({
+        where: {
+          userId: id,
+        },
+        data: {
+          deleted_at: new Date(),
+        },
+      });
+  
+      this.resp.message = 'User marked as deleted successfully';
+      this.resp.data = updatedUser;
     } catch (error) {
-      console.log(error)
+      console.log(error);
       this.resp.statusCode = 400;
       this.resp.message = error;
       this.resp.error = true;
