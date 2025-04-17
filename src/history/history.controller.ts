@@ -50,6 +50,22 @@ export class HistoryController {
     const userId = req.user.id;
     return await this.historyService.getEnhancedWeeklyAverages(userId, exerciseId);
   }
+  
+  @Get("monthly-averages")
+  @UseGuards(JwtAuthGuard)
+  async getMonthlyAverages(@Request() req, @Query('exerciseId') exerciseId?: number,
+  ) {
+    const userId = req.user.id;
+    return await this.historyService.getEnhancedMonthlyAverages(userId, exerciseId);
+  }
+  
+  @Get("daily-averages")
+  @UseGuards(JwtAuthGuard)
+  async getDailyAverages(@Request() req, @Query('exerciseId') exerciseId?: number, @Query('day') day?: Date
+  ) {
+    const userId = req.user.id;
+    return await this.historyService.getEnhancedDailyAverages(userId, exerciseId, day);
+  }
 
   @Get("appUse")
   @UseGuards(JwtAuthGuard)

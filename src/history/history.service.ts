@@ -8,6 +8,7 @@ import PDFDocument = require('pdfkit'); // Usa require en lugar de import
 import { join } from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
+import { log } from 'console';
 
 @Injectable()
 export class HistoryService {
@@ -148,7 +149,7 @@ export class HistoryService {
     return this.resp;
   }
 
-  async getEnhancedWeeklyAverages(userId: number, exerciseId?: number) {
+  /* async getEnhancedWeeklyAverages(userId: number, exerciseId?: number) {
     const conditions: any = {
       userId,
       deleted_at: null,
@@ -218,7 +219,259 @@ export class HistoryService {
       generalWeeklyAverages,
       achievedGoalWeeklyAverages,
     };
+  } */
+
+    async getEnhancedWeeklyAverages(userId: number, exerciseId?: number) {
+      const conditions: any = {
+        userId,
+        deleted_at: null,
+      };
+    
+      if (exerciseId) {
+        conditions.exerciseId = Number(exerciseId);
+      }
+    
+      const result = await this.prisma.history.groupBy({
+        by: ['created_at'],
+        where: conditions,
+        _avg: {
+          value: true,
+        },
+        orderBy: {
+          created_at: 'asc',
+        },
+      });
+    
+      const achievedGoalResult = await this.prisma.history.groupBy({
+        by: ['created_at'],
+        where: {
+          ...conditions,
+          achievedGoal: true,
+          goalToReach: { not: null },
+        },
+        _avg: {
+          value: true,
+        },
+        orderBy: {
+          created_at: 'asc',
+        },
+      });
+    
+      const getWeekKey = (date: Date) => {
+        const firstDay = new Date(date);
+        firstDay.setHours(0, 0, 0, 0);
+        const day = firstDay.getDay();
+        const diff = firstDay.getDate() - day + (day === 0 ? -6 : 1); // Lunes como inicio
+        const monday = new Date(firstDay.setDate(diff));
+        return monday.toISOString().split('T')[0]; // YYYY-MM-DD
+      };
+    
+      const weeklyTotals: Record<string, { total: number; count: number }> = {};
+      const achievedTotals: Record<string, { total: number; count: number }> = {};
+    
+      for (const r of result) {
+        const key = getWeekKey(r.created_at);
+        if (!weeklyTotals[key]) weeklyTotals[key] = { total: 0, count: 0 };
+        weeklyTotals[key].total += r._avg.value || 0;
+        weeklyTotals[key].count += 1;
+      }
+    
+      for (const r of achievedGoalResult) {
+        const key = getWeekKey(r.created_at);
+        if (!achievedTotals[key]) achievedTotals[key] = { total: 0, count: 0 };
+        achievedTotals[key].total += r._avg.value || 0;
+        achievedTotals[key].count += 1;
+      }
+    
+      const generalAverages = Object.keys(weeklyTotals).map(key => ({
+        key,
+        value: weeklyTotals[key].total / weeklyTotals[key].count,
+      }));
+    
+      const achievedGoalAverages = Object.keys(achievedTotals).map(key => ({
+        key,
+        value: achievedTotals[key].total / achievedTotals[key].count,
+      }));
+    
+      const averageValue =
+        generalAverages.length > 0
+          ? generalAverages.reduce((sum, r) => sum + r.value, 0) / generalAverages.length
+          : 0;
+    
+      const averageAchievedValue =
+        achievedGoalAverages.length > 0
+          ? achievedGoalAverages.reduce((sum, r) => sum + r.value, 0) / achievedGoalAverages.length
+          : 0;
+    
+      return {
+        generalAverages,
+        achievedGoalAverages,
+        averageValue,
+        averageAchievedValue,
+      };
+    }
+    
+  
+    async getEnhancedMonthlyAverages(userId: number, exerciseId?: number) {
+      const conditions: any = {
+        userId,
+        deleted_at: null,
+      };
+    
+      if (exerciseId) {
+        conditions.exerciseId = Number(exerciseId);
+      }
+    
+      const result = await this.prisma.history.groupBy({
+        by: ['created_at'],
+        where: conditions,
+        _avg: {
+          value: true,
+        },
+        orderBy: {
+          created_at: 'asc',
+        },
+      });
+    
+      const achievedGoalResult = await this.prisma.history.groupBy({
+        by: ['created_at'],
+        where: {
+          ...conditions,
+          achievedGoal: true,
+          goalToReach: { not: null },
+        },
+        _avg: {
+          value: true,
+        },
+        orderBy: {
+          created_at: 'asc',
+        },
+      });
+    
+      const getMonthKey = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+      };
+    
+      const monthlyTotals: Record<string, { total: number; count: number }> = {};
+      const achievedTotals: Record<string, { total: number; count: number }> = {};
+    
+      for (const r of result) {
+        const key = getMonthKey(r.created_at);
+        if (!monthlyTotals[key]) monthlyTotals[key] = { total: 0, count: 0 };
+        monthlyTotals[key].total += r._avg.value || 0;
+        monthlyTotals[key].count += 1;
+      }
+    
+      for (const r of achievedGoalResult) {
+        const key = getMonthKey(r.created_at);
+        if (!achievedTotals[key]) achievedTotals[key] = { total: 0, count: 0 };
+        achievedTotals[key].total += r._avg.value || 0;
+        achievedTotals[key].count += 1;
+      }
+    
+      const generalAverages = Object.keys(monthlyTotals).map(key => ({
+        key,
+        value: monthlyTotals[key].total / monthlyTotals[key].count,
+      }));
+    
+      const achievedGoalAverages = Object.keys(achievedTotals).map(key => ({
+        key,
+        value: achievedTotals[key].total / achievedTotals[key].count,
+      }));
+    
+      const averageValue =
+        generalAverages.length > 0
+          ? generalAverages.reduce((sum, r) => sum + r.value, 0) / generalAverages.length
+          : 0;
+    
+      const averageAchievedValue =
+        achievedGoalAverages.length > 0
+          ? achievedGoalAverages.reduce((sum, r) => sum + r.value, 0) / achievedGoalAverages.length
+          : 0;
+    
+      return {
+        generalAverages,
+        achievedGoalAverages,
+        averageValue,
+        averageAchievedValue,
+      };
+    }
+    
+  
+  async getEnhancedDailyAverages(userId: number, exerciseId?: number, date?: Date) {
+    const localDate = date ? new Date(date) : new Date();
+
+    console.log("FECHA LOCAL", localDate)
+  
+    // Calculamos los límites en UTC equivalentes al día local (UTC-5)
+    const utcOffsetInMs = 5 * 60 * 60 * 1000;
+  
+    const utcStart = new Date(localDate);
+    utcStart.setUTCHours(5, 0, 0, 0); // 5am UTC = 00:00 hora local
+  
+    const utcEnd = new Date(utcStart);
+    utcEnd.setUTCHours(utcEnd.getUTCHours() + 24); // siguiente día a las 5am UTC
+  
+    const conditions: any = {
+      userId,
+      deleted_at: null,
+      created_at: {
+        gte: utcStart,
+        lt: utcEnd, // usamos lt en lugar de lte para evitar colisión con el siguiente día
+      },
+    };
+    console.log("CONDITIONS", conditions)
+  
+    if (exerciseId) {
+      conditions.exerciseId = Number(exerciseId);
+    }
+  
+    const entries = await this.prisma.history.findMany({
+      where: conditions,
+      select: {
+        value: true,
+        created_at: true,
+        achievedGoal: true,
+        goalToReach: true,
+      },
+      orderBy: {
+        created_at: 'asc',
+      },
+    });
+  
+    // Para mostrar hora local, restamos 5h a los timestamps
+    const generalAverages = entries.map(entry => ({
+      key: new Date(entry.created_at.getTime()).toTimeString().slice(0, 5),
+      value: entry.value || 0,
+    }));
+  
+    const achievedGoalAverages = entries
+      .filter(entry => entry.achievedGoal && entry.goalToReach !== null)
+      .map(entry => ({
+        key: new Date(entry.created_at.getTime()).toTimeString().slice(0, 5),
+        value: entry.value || 0,
+      }));
+  
+    const averageValue =
+      generalAverages.length > 0
+        ? generalAverages.reduce((sum, r) => sum + r.value, 0) / generalAverages.length
+        : 0;
+  
+    const averageAchievedValue =
+      achievedGoalAverages.length > 0
+        ? achievedGoalAverages.reduce((sum, r) => sum + r.value, 0) / achievedGoalAverages.length
+        : 0;
+  
+    return {
+      generalAverages,
+      achievedGoalAverages,
+      averageValue,
+      averageAchievedValue,
+    };
   }
+  
   
 
   async getWeeklyAverages(userId: number, exerciseId?: number) {
