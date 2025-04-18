@@ -27,19 +27,37 @@ export class HistoryController {
 
   @Get('report')
   @UseGuards(JwtAuthGuard)
-  async getUserReport(@Request() req, @Res() res: Response) {
+  async getUserReportData(
+    @Request() req,
+    @Query('exerciseId') exerciseId?: number,
+    @Query('period') period: 'daily' | 'weekly' | 'monthly' = 'weekly',
+    @Query('day') day?: string
+  ) {
     try {
       const userId = req.user.id;
-      await this.historyService.generateUserReport(userId,res);
-
-      /* res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="user_report_${userId}.pdf"`,
-      });
-      res.sendFile(filePath); */
+  
+      // Convertir el query param `day` (string) a Date si existe
+      const parsedDay = day ? new Date(day) : undefined;
+  
+      const reportData = await this.historyService.generateUserReport(
+        userId,
+        exerciseId,
+        period,
+        parsedDay
+      );
+  
+      return {
+        error: false,
+        message: 'Report data generated successfully',
+        data: reportData,
+      };
     } catch (error) {
-      console.error('Error fetching user report:', error);
-      res.status(500).json({ message: 'Failed to generate user report' });
+      console.error('Error fetching report data:', error);
+      return {
+        error: true,
+        message: 'Failed to generate report data',
+        data: {},
+      };
     }
   }
   

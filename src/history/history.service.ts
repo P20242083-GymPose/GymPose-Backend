@@ -640,70 +640,55 @@ export class HistoryService {
     return this.resp;
   }
   
-  async generateUserReport(userId: number, res: Response, exerciseId?: number): Promise<void> {
+  async generateUserReport(userId: number, exerciseId?: number, period: 'daily' | 'weekly' | 'monthly' = 'weekly', day?: Date) {
     try {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                goals: true,
-            }
-        });
-
-        const appUsage: any = await this.getAppUse(userId); // Obtén los datos de uso
-        const weeklyAverages = await this.getWeeklyAverages(userId, exerciseId); // Obtén los avances del usuario
-
-        const doc = new PDFDocument();
-        const buffers: Buffer[] = [];
-
-        doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-            const pdfBuffer = Buffer.concat(buffers);
-            // Configura las cabeceras para la respuesta
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="user_report_${userId}.pdf"`);
-            res.send(pdfBuffer); // Envía el PDF como respuesta
-        });
-
-        // Encabezado
-        doc.fontSize(20).text('User Report', { align: 'center' });
-        doc.moveDown();
-
-        // Información del usuario
-        doc.fontSize(14).text('User Information:', { underline: true });
-        doc.fontSize(12).text(`Name: ${user.name}`);
-        doc.text(`Email: ${user.email}`);
-        doc.text(`User ID: ${user.id}`);
-        doc.moveDown();
-
-        // Información de uso de la app
-        doc.fontSize(14).text('App Usage Information:', { underline: true });
-        doc.fontSize(12).text(`Average Improvement: ${appUsage.data.averageImprovement}`);
-        doc.text(`Total Exercise Time: ${appUsage.data.totalTime}`);
-        doc.text(`Exercise Count: ${appUsage.data.exerciseCount}`);
-        doc.moveDown();
-
-        // Avances del usuario
-        doc.fontSize(14).text('User Progress:', { underline: true });
-        weeklyAverages.forEach((week, index) => {
-            doc.fontSize(12).text(`Week ${index + 1} (${week.week}): ${week.averageValue.toFixed(2)}% improvement`);
-        });
-        doc.moveDown();
-
-        // Cierre
-        doc.fontSize(14).text('Summary:', { underline: true });
-        doc.fontSize(12).text('This report highlights the user’s progress and app usage.');
-        doc.text('Keep working towards your goals!');
-        
-        // Finaliza y envía el PDF
-        doc.end();
+      // Obtener información básica del usuario
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          goals: true,
+        }
+      });
+  
+      // Validación por si no existe el usuario
+      if (!user) {
+        throw new Error('User not found');
+      }
+  
+      // Obtener estadísticas de uso general de la app
+      const appUsageResult: any = await this.getAppUse(userId);
+      const appUsage = appUsageResult.data;
+  
+      // Obtener los promedios según el periodo
+      let averages: {
+        generalAverages: { key: string, value: number }[],
+        achievedGoalAverages: { key: string, value: number }[],
+        averageValue: number,
+        averageAchievedValue: number
+      };
+  
+      if (period === 'daily') {
+        averages = await this.getEnhancedDailyAverages(userId, exerciseId, day);
+      } else if (period === 'monthly') {
+        averages = await this.getEnhancedMonthlyAverages(userId, exerciseId);
+      } else {
+        averages = await this.getEnhancedWeeklyAverages(userId, exerciseId);
+      }
+  
+      return {
+        user,
+        appUsage,
+        averages
+      };
     } catch (error) {
-        console.error('Error generating report:', error);
-        throw new Error('Failed to generate report');
+      console.error('Error generating user report data:', error);
+      throw new Error('Failed to prepare user report data');
     }
-}
+  }
+  
 
   update(id: number, updateHistoryDto: UpdateHistoryDto) {
     return `This action updates a #${id} history`;
