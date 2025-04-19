@@ -441,16 +441,20 @@ export class HistoryService {
       },
     });
   
-    // Para mostrar hora local, restamos 5h a los timestamps
+    const adjustTimezone = (date: Date) => {
+      const offsetMs = 5 * 60 * 60 * 1000; // 5 horas en milisegundos
+      return new Date(date.getTime() - offsetMs);
+    };
+    
     const generalAverages = entries.map(entry => ({
-      key: new Date(entry.created_at.getTime()).toTimeString().slice(0, 5),
+      key: adjustTimezone(entry.created_at).toTimeString().slice(0, 5),
       value: entry.value || 0,
     }));
-  
+    
     const achievedGoalAverages = entries
       .filter(entry => entry.achievedGoal && entry.goalToReach !== null)
       .map(entry => ({
-        key: new Date(entry.created_at.getTime()).toTimeString().slice(0, 5),
+        key: adjustTimezone(entry.created_at).toTimeString().slice(0, 5),
         value: entry.value || 0,
       }));
   
