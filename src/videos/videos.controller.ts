@@ -35,7 +35,7 @@ export class VideosController {
     @Body('exerciseName') exerciseName: string,
   ): Promise<{ trimmedVideoFilename: string; score: number }> {
     const inputPath = file.path;
-    const fileName = `trimmed_${Date.now()}.mp4`;
+    const fileName = `trimmed_${Date.now()}.webm`;
     const outputPath = path.join(__dirname, '..', '..', 'uploads', fileName);
 
     const processVideo = (): Promise<void> => {
@@ -43,11 +43,12 @@ export class VideosController {
         ffmpeg(inputPath)
           .setStartTime(start)
           .setDuration(duration)
-          .videoCodec('libvpx-vp9')
-          .audioCodec('libopus')
+          .noAudio()
+          .videoCodec('libvpx')
           .outputOptions([
-            '-crf 30',
+            '-crf 32',
             '-b:v 0',
+            '-cpu-used 5',
             '-pix_fmt yuv420p',
           ])
           .output(outputPath)
