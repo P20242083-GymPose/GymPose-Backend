@@ -46,7 +46,7 @@ export class VideosController {
           .noAudio()
           .videoCodec('libvpx')
           .outputOptions([
-            '-crf 32',
+            '-crf 28',
             '-b:v 0',
             '-cpu-used 5',
             '-pix_fmt yuv420p',
