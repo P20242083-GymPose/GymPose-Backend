@@ -70,19 +70,24 @@ export class VideosController {
       });
   
       const baseUrl = this.configService.get<string>('API_MODEL_URL');
+      console.log('Base URL:', baseUrl);
       const apiUrl = `${baseUrl}/get-score-${exerciseName}`;
+      console.log('API URL:', apiUrl);
 
       const response = await firstValueFrom(
         this.httpService.post(apiUrl, form, {
           headers: form.getHeaders(),
         })
       );
+      console.log('Response status:', response);
   
       const result = response.data as { score: string | number };
+      console.log('Response from microservice:', result);
       return Math.round(parseFloat(result.score.toString()) * 100);
     };
   
     await processVideo();
+    console.log('Video trimmed and saved to:', outputPath);
     const score = await sendToMicroservice();
 
     return {
