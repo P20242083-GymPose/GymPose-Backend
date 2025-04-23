@@ -13,9 +13,15 @@ import { VideosModule } from './videos/videos.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { MulterModule } from '@nestjs/platform-express';
+import { HttpModule } from '@nestjs/axios';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [PrismaModule, UsersModule, HistoryModule, ExerciseModule, GoalModule, SettingsModule, AuthModule, VideosModule, MulterModule.register({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, 
+    }),
+    PrismaModule, HttpModule, UsersModule, HistoryModule, ExerciseModule, GoalModule, SettingsModule, AuthModule, VideosModule, MulterModule.register({
     dest: './uploads',
   }), ServeStaticModule.forRoot({
     rootPath: join(__dirname, '..', 'uploads'),

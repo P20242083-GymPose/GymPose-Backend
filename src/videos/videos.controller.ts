@@ -10,10 +10,86 @@ import { extname } from 'path';
 import * as multer from 'multer';
 import { Express } from 'express'; 
 import { join } from 'path';
+import * as ffmpeg from 'fluent-ffmpeg';
+import * as ffmpegPath from 'ffmpeg-static';
+import * as path from 'path';
+import * as fs from 'fs';
+import fetch from 'node-fetch';
+import * as FormData from 'form-data';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 @Controller('videos')
 export class VideosController {
-  constructor(private readonly videosService: VideosService) {}
+  constructor(private readonly videosService: VideosService, private readonly httpService: HttpService, private readonly configService: ConfigService) {}
+
+  @Post('trim')
+  @UseInterceptors(FileInterceptor('video'))
+  async trimVideo(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('start') start: string,
+    @Body('duration') duration: string,
+    @Body('exerciseName') exerciseName: string,
+  ): Promise<{ trimmedVideoFilename: string; score: number }> {
+    const inputPath = file.path;
+    const fileName = `trimmed_${Date.now()}.mp4`;
+    const outputPath = path.join(__dirname, '..', '..', 'uploads', fileName);
+
+    const processVideo = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .setStartTime(start)
+          .setDuration(duration)
+          .videoCodec('libvpx-vp9')
+          .audioCodec('libopus')
+          .outputOptions([
+            '-crf 30',
+            '-b:v 0',
+            '-pix_fmt yuv420p',
+          ])
+          .output(outputPath)
+          .on('end', () => {
+            fs.unlinkSync(inputPath);
+            resolve();
+          })
+          .on('error', (err) => {
+            reject(err);
+          })
+          .run();
+      });
+    };
+
+    const sendToMicroservice = async (): Promise<number> => {
+      const form = new (require('form-data'))();
+      form.append('video', fs.createReadStream(outputPath), {
+        filename: fileName,
+        contentType: 'video/webm',
+      });
+  
+      const baseUrl = this.configService.get<string>('API_MODEL_URL');
+      const apiUrl = `${baseUrl}/get-score-${exerciseName}`;
+
+      const response = await firstValueFrom(
+        this.httpService.post(apiUrl, form, {
+          headers: form.getHeaders(),
+        })
+      );
+  
+      const result = response.data as { score: string | number };
+      return Math.round(parseFloat(result.score.toString()) * 100);
+    };
+  
+    await processVideo();
+    const score = await sendToMicroservice();
+
+    return {
+      trimmedVideoFilename: fileName,
+      score,
+    };
+  }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', {
