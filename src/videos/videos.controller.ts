@@ -19,6 +19,7 @@ import * as FormData from 'form-data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
+import { HttpException } from '@nestjs/common';
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -71,30 +72,39 @@ export class VideosController {
       });
   
       const baseUrl = this.configService.get<string>('API_MODEL_URL');
-      console.log('Base URL:', baseUrl);
       const apiUrl = `${baseUrl}/get-score-${exerciseName}`;
-      console.log('API URL:', apiUrl);
-
-      const response = await firstValueFrom(
-        this.httpService.post(apiUrl, form, {
-          headers: form.getHeaders(),
-        })
-      );
-      console.log('Response status:', response);
   
-      const result = response.data as { score: string | number };
-      console.log('Response from microservice:', result);
-      return Math.round(parseFloat(result.score.toString()) * 100);
+      try {
+        const response = await firstValueFrom(
+          this.httpService.post(apiUrl, form, {
+            headers: form.getHeaders(),
+          })
+        );
+        const result = response.data as { score: string | number };
+        return Math.round(parseFloat(result.score.toString()) * 100);
+      } catch (error) {
+        console.error('Error calling microservice:', error.response?.data || error.message);
+        
+        throw new HttpException(
+          error.response?.data?.error || 'Error al obtener score del microservicio',
+          error.response?.status || 500,
+        );
+      }
     };
   
-    await processVideo();
-    console.log('Video trimmed and saved to:', outputPath);
-    const score = await sendToMicroservice();
-
-    return {
-      trimmedVideoFilename: fileName,
-      score,
-    };
+    try {
+      await processVideo();
+      console.log('Video trimmed and saved to:', outputPath);
+      const score = await sendToMicroservice();
+  
+      return {
+        trimmedVideoFilename: fileName,
+        score,
+      };
+    } catch (error) {
+      console.error('Error in trimVideo:', error);
+      throw error; 
+    }
   }
 
   @Post('upload')
