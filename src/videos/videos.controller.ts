@@ -36,7 +36,7 @@ export class VideosController {
     @Body('exerciseName') exerciseName: string,
   ): Promise<{ trimmedVideoFilename: string; score: number }> {
     const inputPath = file.path;
-    const fileName = `trimmed_${Date.now()}.webm`;
+    const fileName = `trimmed_${Date.now()}.mp4`;
     const outputPath = path.join(__dirname, '..', '..', 'uploads', fileName);
 
     const processVideo = (): Promise<void> => {
@@ -45,16 +45,15 @@ export class VideosController {
           .setStartTime(start)
           .setDuration(duration)
           .noAudio()
-          .videoCodec('libvpx')
+          .videoCodec('libx264') 
           .outputOptions([
-            '-crf 32',
-            '-b:v 0',
-            '-cpu-used 5',
-            '-pix_fmt yuv420p',
+            '-preset veryfast',   
+            '-crf 28',           
+            '-pix_fmt yuv420p', 
           ])
           .output(outputPath)
           .on('end', () => {
-            fs.unlinkSync(inputPath);
+            fs.unlinkSync(inputPath); 
             resolve();
           })
           .on('error', (err) => {
@@ -63,12 +62,12 @@ export class VideosController {
           .run();
       });
     };
-
+    
     const sendToMicroservice = async (): Promise<number> => {
       const form = new (require('form-data'))();
       form.append('video', fs.createReadStream(outputPath), {
         filename: fileName,
-        contentType: 'video/webm',
+        contentType: 'video/mp4',
       });
   
       const baseUrl = this.configService.get<string>('API_MODEL_URL');
@@ -127,13 +126,13 @@ export class VideosController {
 
   @Get(':name')
   async getVideo(@Param('name') name: string, @Res() res: Response) {
-    const videoPath = join(__dirname, '..', '..', 'uploads', `${name}.webm`);
+    const videoPath = join(__dirname, '..', '..', 'uploads', `${name}.mp4`);
     if (!existsSync(videoPath)) {
       return res.status(404).send('Video not found');
     }
     res.set({
-      'Content-Type': 'video/webm',
-      'Content-Disposition': `inline; filename="${name}.webm"`,
+      'Content-Type': 'video/mp4',
+      'Content-Disposition': `inline; filename="${name}.mp4"`,
     });
     const videoStream = createReadStream(videoPath);
     videoStream.pipe(res);
