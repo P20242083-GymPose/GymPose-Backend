@@ -47,9 +47,11 @@ export class VideosController {
           .noAudio()
           .videoCodec('libx264') 
           .outputOptions([
-            '-preset veryfast',   
-            '-crf 28',           
+            '-preset ultrafast',   
+            '-crf 32',           
             '-pix_fmt yuv420p', 
+            '-movflags +faststart',
+            '-tune zerolatency'
           ])
           .output(outputPath)
           .on('end', () => {
