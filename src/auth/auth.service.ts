@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import * as nodemailer from 'nodemailer';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -117,13 +118,14 @@ export class AuthService {
     return password;
   }
 
-  async sendRecoveryEmail(to: string, newPassword: string) {
+  /* async sendRecoveryEmail(to: string, newPassword: string) {
+    const brevoAPIKey = process.env.BREVO_API_KEY
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       port: 465,
       auth: {
         user: 'kendallramiro@gmail.com',
-        pass: 'fgmbqiliubuqfcve',
+        pass: '',
       },
       secure: true
     });
@@ -136,5 +138,39 @@ export class AuthService {
     };
 
     await transporter.sendMail(mailOptions);
-  }
+  } */
+    async sendRecoveryEmail(to: string, newPassword: string) {
+      const senderEmail = process.env.SENDER_EMAIL;
+      const brevoAPIKey = process.env.BREVO_API_KEY;
+    
+      try {
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+          sender: { email: senderEmail, name: 'Gym Pose' },
+          to: [{ email: to }],
+          subject: 'Recuperación de Contraseña',
+          htmlContent: `
+            <div style="font-family: Arial, sans-serif; font-size: 16px; color: #333;">
+              <h2 style="color: #4CAF50;">Recuperación de Contraseña</h2>
+              <p>Hola,</p>
+              <p>Tu nueva contraseña para acceder a Gym Pose es:</p>
+              <p style="font-size: 18px; font-weight: bold; color: #007bff;">${newPassword}</p>
+              <p>Te recomendamos cambiar esta contraseña después de iniciar sesión por seguridad.</p>
+              <br>
+              <p>¡Gracias por confiar en <strong>Gym Pose</strong>!</p>
+            </div>
+          `,
+        }, {
+          headers: {
+            'accept': 'application/json',
+            'api-key': brevoAPIKey || '',
+            'content-type': 'application/json',
+          },
+        });
+    
+        console.log('Correo enviado exitosamente:', response.data);
+      } catch (error) {
+        console.error('Error al enviar correo:', error.response?.data || error);
+        throw new Error('No se pudo enviar el correo de recuperación');
+      }
+    }
 }
