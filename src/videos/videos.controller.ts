@@ -42,20 +42,17 @@ export class VideosController {
     const processVideo = (): Promise<void> => {
       return new Promise((resolve, reject) => {
         ffmpeg(inputPath)
-          .setStartTime(start)
-          .setDuration(duration)
-          .noAudio()
-          .videoCodec('libx264') 
+          .inputOptions([ `-ss ${start}` ])
           .outputOptions([
-            '-preset ultrafast',   
-            '-crf 32',           
-            '-pix_fmt yuv420p', 
-            '-movflags +faststart',
-            '-tune zerolatency'
+            `-t ${duration}`,
+            '-an',  
+            '-c:v copy', 
+            '-movflags +faststart' 
           ])
+          .format('mp4')
           .output(outputPath)
           .on('end', () => {
-            fs.unlinkSync(inputPath); 
+            fs.unlinkSync(inputPath);
             resolve();
           })
           .on('error', (err) => {
@@ -76,11 +73,13 @@ export class VideosController {
       const apiUrl = `${baseUrl}/get-score-${exerciseName}`;
   
       try {
+        console.log('Sending video to microservice:', apiUrl);
         const response = await firstValueFrom(
           this.httpService.post(apiUrl, form, {
             headers: form.getHeaders(),
           })
         );
+        console.log('Microservice response:', response.data);
         const result = response.data as { score: string | number };
         return Math.round(parseFloat(result.score.toString()) * 100);
       } catch (error) {
