@@ -45,11 +45,22 @@ export class HistoryController {
         period,
         parsedDay
       );
+
+      // Si no llega exerciseId, recolectamos también promedios por cada ejercicio
+      let perExerciseAverages = [];
+      if (exerciseId == null) {
+        perExerciseAverages = await this.historyService.getPerExerciseAverages(userId);
+      }
   
       return {
         error: false,
         message: 'Report data generated successfully',
-        data: reportData,
+        data: {
+          user: reportData.user,
+          appUsage: reportData.appUsage,
+          averages: reportData.averages, 
+          perExerciseAverages  
+        },
       };
     } catch (error) {
       console.error('Error fetching report data:', error);

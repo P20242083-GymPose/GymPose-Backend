@@ -643,6 +643,45 @@ export class HistoryService {
   
     return this.resp;
   }
+
+  async getPerExerciseAverages(userId: number) {
+    // 1) promedio general por ejercicio
+    const general = await this.prisma.history.groupBy({
+      by: ['exerciseId'],
+      where: { userId, deleted_at: null },
+      _avg: { value: true },
+    });
+
+    // 2) promedio sólo de los ejercicios logrados
+    const achieved = await this.prisma.history.groupBy({
+      by: ['exerciseId'],
+      where: {
+        userId,
+        deleted_at: null,
+        achievedGoal: true,
+        goalToReach: { not: null },
+      },
+      _avg: { value: true },
+    });
+
+    // 3) ensamblar array final con nombre de ejercicio
+    const results = await Promise.all(
+      general.map(async g => {
+        const ex = await this.prisma.exercise.findUnique({
+          where: { id: g.exerciseId },
+          select: { name: true },
+        });
+        const a = achieved.find(r => r.exerciseId === g.exerciseId);
+        return {
+          key: ex?.name ?? `#${g.exerciseId}`,
+          averageValue: g._avg.value ?? 0,
+          averageAchievedValue: a?._avg.value ?? 0,
+        };
+      })
+    );
+
+    return results;
+  }
   
   async generateUserReport(userId: number, exerciseId?: number, period: 'daily' | 'weekly' | 'monthly' = 'weekly', day?: Date) {
     try {
